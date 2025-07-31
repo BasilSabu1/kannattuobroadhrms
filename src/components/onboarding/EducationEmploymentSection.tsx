@@ -11,9 +11,10 @@ import { useState } from "react";
 interface EducationEmploymentSectionProps {
   data: any;
   onUpdate: (data: any) => void;
+  errors?: any;
 }
 
-export function EducationEmploymentSection({ data, onUpdate }: EducationEmploymentSectionProps) {
+export function EducationEmploymentSection({ data, onUpdate, errors = {} }: EducationEmploymentSectionProps) {
   const [joiningDate, setJoiningDate] = useState<Date | undefined>(data.joiningDate);
 
   const handleInputChange = (field: string, value: string) => {
@@ -37,7 +38,11 @@ export function EducationEmploymentSection({ data, onUpdate }: EducationEmployme
             onChange={(e) => handleInputChange("qualification", e.target.value)}
             placeholder="e.g., Bachelor's, Master's, Diploma"
             required
+            className={errors.qualification ? "border-red-500" : ""}
           />
+          {errors.qualification && (
+            <p className="text-red-500 text-sm">{errors.qualification}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -45,11 +50,18 @@ export function EducationEmploymentSection({ data, onUpdate }: EducationEmployme
           <Input
             id="aadhaarNumber"
             value={data.aadhaarNumber || ""}
-            onChange={(e) => handleInputChange("aadhaarNumber", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              handleInputChange("aadhaarNumber", value);
+            }}
             placeholder="Enter 12-digit Aadhaar number"
             maxLength={12}
             required
+            className={errors.aadhaarNumber ? "border-red-500" : ""}
           />
+          {errors.aadhaarNumber && (
+            <p className="text-red-500 text-sm">{errors.aadhaarNumber}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -57,12 +69,19 @@ export function EducationEmploymentSection({ data, onUpdate }: EducationEmployme
           <Input
             id="panNumber"
             value={data.panNumber || ""}
-            onChange={(e) => handleInputChange("panNumber", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+              handleInputChange("panNumber", value);
+            }}
             placeholder="Enter PAN number"
             maxLength={10}
             style={{ textTransform: 'uppercase' }}
             required
+            className={errors.panNumber ? "border-red-500" : ""}
           />
+          {errors.panNumber && (
+            <p className="text-red-500 text-sm">{errors.panNumber}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -71,11 +90,18 @@ export function EducationEmploymentSection({ data, onUpdate }: EducationEmployme
             id="experience"
             type="number"
             value={data.experience || ""}
-            onChange={(e) => handleInputChange("experience", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              handleInputChange("experience", value);
+            }}
             placeholder="Enter experience in years"
             min="0"
             required
+            className={errors.experience ? "border-red-500" : ""}
           />
+          {errors.experience && (
+            <p className="text-red-500 text-sm">{errors.experience}</p>
+          )}
         </div>
 
         <div className="space-y-2 md:col-span-2">
@@ -96,11 +122,12 @@ export function EducationEmploymentSection({ data, onUpdate }: EducationEmployme
                 variant="outline"
                 className={cn(
                   "w-full justify-start text-left font-normal",
-                  !joiningDate && "text-muted-foreground"
+                  !joiningDate && "text-muted-foreground",
+                  errors.joiningDate ? "border-red-500" : ""
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {joiningDate ? format(joiningDate, "PPP") : <span>Pick joining date</span>}
+                {joiningDate ? format(joiningDate, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -113,6 +140,39 @@ export function EducationEmploymentSection({ data, onUpdate }: EducationEmployme
               />
             </PopoverContent>
           </Popover>
+          {errors.joiningDate && (
+            <p className="text-red-500 text-sm">{errors.joiningDate}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="designation">Designation *</Label>
+          <Input
+            id="designation"
+            value={data.designation || ""}
+            onChange={(e) => handleInputChange("designation", e.target.value)}
+            placeholder="Enter your designation"
+            required
+            className={errors.designation ? "border-red-500" : ""}
+          />
+          {errors.designation && (
+            <p className="text-red-500 text-sm">{errors.designation}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="branch">Branch *</Label>
+          <Input
+            id="branch"
+            value={data.branch || ""}
+            onChange={(e) => handleInputChange("branch", e.target.value)}
+            placeholder="Enter branch name"
+            required
+            className={errors.branch ? "border-red-500" : ""}
+          />
+          {errors.branch && (
+            <p className="text-red-500 text-sm">{errors.branch}</p>
+          )}
         </div>
       </div>
     </div>
