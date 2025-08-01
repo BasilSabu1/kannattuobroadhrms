@@ -1,8 +1,9 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8000/"; 
+const API_BASE_URL = "https://kannattu-llp.onrender.com"; 
 
 //http://localhost:8000/
+//https://kannattu-llp.onrender.com
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
