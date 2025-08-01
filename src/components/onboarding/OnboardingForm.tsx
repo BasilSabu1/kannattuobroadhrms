@@ -191,7 +191,7 @@ export function OnboardingForm() {
   const [errors, setErrors] = useState<any>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [applicationSubmitted, setApplicationSubmitted] = useState(false); // New state for application submission
+  const [applicationSubmitted, setApplicationSubmitted] = useState(false); 
   const USER_UUID_KEY = 'onboarding_user_uuid';
 
   const progress = ((currentSection + 1) / sections.length) * 100;
@@ -399,6 +399,7 @@ export function OnboardingForm() {
 
 
 
+
   useEffect(() => {
     const checkExistingUUID = async () => {
       const savedUUID = localStorage.getItem(USER_UUID_KEY);
@@ -440,6 +441,8 @@ export function OnboardingForm() {
     loadingPromises.push(
       axiosInstance.get(API_URLS.PERSONAL_DETAILS.GET_PERSONAL_DETAILS(uuid))
         .then(response => {
+          console.log(response);
+
           if (response.data) {
             const personalData = {
               fullName: response.data.full_name,
@@ -464,15 +467,13 @@ export function OnboardingForm() {
         .catch(error => console.warn('Personal details not found:', error))
     );
 
-    // Load Address
     loadingPromises.push(
       axiosInstance.get(API_URLS.ADDRESS.GET_ADDRESSES_UUID(uuid))
         .then(response => {
-          // Check if response.data is an array and has at least one item
           console.log(response);
-          
+
           if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-            const addressData = response.data.data[0]; // Get the first address from the array
+            const addressData = response.data.data[0];
 
             const formattedAddressData = {
               addressLine: addressData.address_line,
@@ -524,30 +525,68 @@ export function OnboardingForm() {
     );
 
     // Load Education Employment
+    // Replace the Education Employment loading section in loadExistingData function
+    // Load Education Employment
+    // Replace the Education Employment loading section in loadExistingData function
     loadingPromises.push(
       axiosInstance.get(API_URLS.EDUCATION_EMPLOYMENT.GET_EDUCATION_EMPLOYMENT_ID(uuid))
         .then(response => {
+          console.log('Education Employment Full Response:', response);
+          console.log('Education Employment Response Data:', response.data);
+
+          let educationData = null;
+
+          // Handle different possible response structures
           if (response.data) {
-            const educationData = {
-              qualification: response.data.highest_qualification,
-              aadhaarNumber: response.data.aadhaar_number,
-              panNumber: response.data.pan_number,
-              experience: response.data.experience_years,
-              joiningDate: response.data.joining_date,
-              branch: response.data.branch,
-              designation: response.data.designation,
-              previousEmployer: response.data.previous_employer,
+            // Case 1: Direct data structure
+            if (response.data.highest_qualification) {
+              educationData = response.data;
+            }
+            // Case 2: Nested data array structure  
+            else if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+              educationData = response.data.data[0];
+            }
+            // Case 3: Single nested data object
+            else if (response.data.data && !Array.isArray(response.data.data) && response.data.data.highest_qualification) {
+              educationData = response.data.data;
+            }
+          }
+
+          console.log('Extracted Education Data:', educationData);
+
+          if (educationData && educationData.highest_qualification) {
+            const formattedEducationData = {
+              qualification: educationData.highest_qualification || '',
+              aadhaarNumber: educationData.aadhaar_number || '',
+              panNumber: educationData.pan_number || '',
+              experience: educationData.experience_years || '',
+              joiningDate: educationData.joining_date || '',
+              branch: educationData.branch || '',
+              designation: educationData.designation || '',
+              previousEmployer: educationData.previous_employer || '',
             };
 
-            updateFormData('educationEmployment', educationData);
+            console.log('Final Formatted Education Data:', formattedEducationData);
+
+            updateFormData('educationEmployment', formattedEducationData);
             updateSubmissionState('educationEmployment', {
               isSubmitted: true,
-              uuid: response.data.uuid || uuid,
-              originalData: { ...educationData }
+              // FIX: Prioritize uuid over id, fallback to user uuid
+              uuid: educationData.uuid || educationData.user_uuid || uuid,
+              originalData: { ...formattedEducationData }
             });
+
+            console.log('Education employment data loaded successfully with UUID:', educationData.uuid || educationData.user_uuid || uuid);
+          } else {
+            console.warn('Education employment data not found or missing required fields');
+            console.warn('Available fields in response:', educationData ? Object.keys(educationData) : 'No data');
           }
         })
-        .catch(error => console.warn('Education employment not found:', error))
+        .catch(error => {
+          console.error('Education employment API error:', error);
+          console.error('Error response:', error.response?.data);
+          console.error('Error status:', error.response?.status);
+        })
     );
 
     // Load Documents (Note: Documents might need special handling as they're files)
@@ -596,7 +635,7 @@ export function OnboardingForm() {
 
     if (submissionState.personalDetails.isSubmitted && submissionState.personalDetails.uuid) {
       // Use PATCH for updates
-      console.log('Updating personal details with PATCH');
+      console.log('Updating personal details with PATCH', API_URLS.PERSONAL_DETAILS.PATCH_PERSONAL_DETAILS(submissionState));
       response = await axiosInstance.patch(
         API_URLS.PERSONAL_DETAILS.PATCH_PERSONAL_DETAILS(submissionState.personalDetails.uuid),
         payload
@@ -767,6 +806,7 @@ export function OnboardingForm() {
   };
 
   // Fix the submitEducationEmployment function in OnboardingForm component
+  console.log(submissionState);
 
   const submitEducationEmployment = async () => {
     const currentData = formData.educationEmployment;
@@ -801,7 +841,7 @@ export function OnboardingForm() {
 
     if (submissionState.educationEmployment.isSubmitted && submissionState.educationEmployment.uuid) {
       // Use PATCH for updates
-      console.log('Updating education employment with PATCH', submissionState.educationEmployment.uuid);
+      console.log('Updating education employment with PATCH Method, UUID:', submissionState.educationEmployment.uuid);
       response = await axiosInstance.patch(
         API_URLS.EDUCATION_EMPLOYMENT.PATCH_EDUCATION_EMPLOYMENT(submissionState.educationEmployment.uuid),
         payload
@@ -813,12 +853,16 @@ export function OnboardingForm() {
     }
 
     // Store original data after successful submission
+    // FIX: Ensure we always store the correct UUID for future PATCH operations
+    const educationUuid = response.data.uuid || response.data.user_uuid || submissionState.educationEmployment.uuid || userUuid;
+
     updateSubmissionState('educationEmployment', {
       isSubmitted: true,
-      uuid: response.data.uuid || response.data.id || submissionState.educationEmployment.uuid,
+      uuid: educationUuid,
       originalData: { ...currentData }
     });
 
+    console.log('Education employment submission completed with UUID:', educationUuid);
     return response;
   };
 
