@@ -330,13 +330,24 @@ export function OnboardingForm() {
     const newErrors: any = {};
     if (!data.qualification) newErrors.qualification = "Highest qualification is required.";
     if (!data.aadhaarNumber) newErrors.aadhaarNumber = "Aadhaar number is required.";
-    if (!data.panNumber) newErrors.panNumber = "PAN number is required.";
+    
+    // Enhanced PAN number validation
+    if (!data.panNumber) {
+      newErrors.panNumber = "PAN number is required.";
+    } else {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(data.panNumber)) {
+        newErrors.panNumber = "PAN number must be in format: ABCDE1234F (5 letters + 4 numbers + 1 letter).";
+      }
+    }
+    
     if (!data.experience) newErrors.experience = "Experience is required.";
     if (!data.joiningDate) newErrors.joiningDate = "Joining date is required.";
     if (!data.branch) newErrors.branch = "Branch is required."; // Add this line
     if (!data.designation) newErrors.designation = "Designation is required.";
     return newErrors;
   };
+  
 
   // Updated validateDocuments function in OnboardingForm
   // Replace the validateDocuments function in OnboardingForm.tsx with this:
@@ -409,11 +420,11 @@ export function OnboardingForm() {
           await loadExistingData(savedUUID);
           setUserUuid(savedUUID);
 
-          toast({
-            title: "Data Recovered",
-            description: "Your previously filled information has been restored.",
-            variant: "success",
-          });
+          // toast({
+          //   title: "Data Recovered",
+          //   description: "Your previously filled information has been restored.",
+          //   variant: "success",
+          // });
         } catch (error) {
           console.error('Error loading existing data:', error);
           // Clear invalid UUID from localStorage
@@ -926,7 +937,7 @@ export function OnboardingForm() {
       formDataToSend.append('document_types', doc.apiType);
 
       // Add the file
-      formDataToSend.append('uploaded_images', doc.file);
+      formDataToSend.append('uploaded_files', doc.file);
 
       documentSubmissions.push({
         formData: formDataToSend,
@@ -990,7 +1001,7 @@ export function OnboardingForm() {
         formDataToSend.append('document_types', document.apiType);
 
         // Add corresponding file
-        formDataToSend.append('uploaded_images', file);
+        formDataToSend.append('uploaded_files', file);
       }
     });
 
@@ -1113,11 +1124,7 @@ export function OnboardingForm() {
     console.log(validateCurrentSection);
 
     if (!validateCurrentSection()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill all required fields correctly before proceeding.",
-        variant: "destructive",
-      });
+      // Don't show toast since field-specific validation errors are already displayed
       return;
     }
 
@@ -1324,7 +1331,7 @@ export function OnboardingForm() {
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Progress</span>
+                  {/* <span className="text-sm font-medium">Progress</span> */}
                   <span className="text-sm text-muted-foreground">
                     {currentSection + 1} of {sections.length}
                   </span>

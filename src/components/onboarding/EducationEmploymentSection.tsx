@@ -4,7 +4,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -25,6 +25,11 @@ export function EducationEmploymentSection({ data, onUpdate, errors = {} }: Educ
   const handleDateChange = (selectedDate: Date | undefined) => {
     setJoiningDate(selectedDate);
     onUpdate({ ...data, joiningDate: selectedDate });
+  };
+
+  // Function to disable past dates
+  const disabledDays = (date: Date) => {
+    return isBefore(startOfDay(date), startOfDay(new Date()));
   };
 
   return (
@@ -70,10 +75,11 @@ export function EducationEmploymentSection({ data, onUpdate, errors = {} }: Educ
             id="panNumber"
             value={data.panNumber || ""}
             onChange={(e) => {
-              const value = e.target.value.replace(/[^A-Z0-9]/g, '').toUpperCase();
+              // Allow only letters and numbers, convert to uppercase
+              const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
               handleInputChange("panNumber", value);
             }}
-            placeholder="Enter PAN number"
+            placeholder="Enter PAN number (e.g., ABCDE1234F)"
             maxLength={10}
             style={{ textTransform: 'uppercase' }}
             required
@@ -135,6 +141,7 @@ export function EducationEmploymentSection({ data, onUpdate, errors = {} }: Educ
                 mode="single"
                 selected={joiningDate}
                 onSelect={handleDateChange}
+                disabled={disabledDays}
                 initialFocus
                 className="p-3 pointer-events-auto"
               />

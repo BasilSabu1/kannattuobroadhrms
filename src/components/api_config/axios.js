@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://kannattu-llp.onrender.com"; 
+const API_BASE_URL = "https://backend.hrms.pixelsoft.online/"; 
 
 //http://localhost:8000/
 //https://kannattu-llp.onrender.com

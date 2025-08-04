@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, CheckCircle, AlertCircle, Files } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertCircle, Files, X } from "lucide-react";
 import { useState } from "react";
 import { DocumentUploadModal } from "./DocumentUploadModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -138,8 +138,43 @@ const documentList: UploadItem[] = [
 
 export function DocumentUploadSection({ data, onUpdate, errors = {} }: DocumentUploadSectionProps) {
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File | null>>(data.files || {});
+  const [dragStates, setDragStates] = useState<Record<string, boolean>>({});
+
+  // Enhanced file validation function
+  const validateFile = (file: File): boolean => {
+    // Check file extension
+    const validExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'webp', 'doc', 'docx', 'txt', 'rtf'];
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (!fileExtension || !validExtensions.includes(fileExtension)) {
+      return false;
+    }
+
+    // Check MIME type for additional validation
+    const validMimeTypes = [
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'image/gif',
+      'image/bmp',
+      'image/tiff',
+      'image/webp',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'application/rtf'
+    ];
+
+    return validMimeTypes.includes(file.type);
+  };
 
   const handleFileUpload = (documentId: string, file: File | null) => {
+    if (file && !validateFile(file)) {
+      console.error('Invalid file type:', file.name, file.type);
+      return;
+    }
+    
     const updatedFiles = { ...uploadedFiles, [documentId]: file };
     setUploadedFiles(updatedFiles);
     onUpdate({ ...data, files: updatedFiles });
@@ -147,6 +182,45 @@ export function DocumentUploadSection({ data, onUpdate, errors = {} }: DocumentU
 
   const handleMultipleFilesUpdate = (files: Record<string, File | null>) => {
     const updatedFiles = { ...uploadedFiles, ...files };
+    setUploadedFiles(updatedFiles);
+    onUpdate({ ...data, files: updatedFiles });
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (documentId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragStates(prev => ({ ...prev, [documentId]: true }));
+  };
+
+  const handleDragLeave = (documentId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragStates(prev => ({ ...prev, [documentId]: false }));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (documentId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragStates(prev => ({ ...prev, [documentId]: false }));
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (validateFile(file)) {
+        handleFileUpload(documentId, file);
+      }
+    }
+  };
+
+  const removeFile = (documentId: string) => {
+    const updatedFiles = { ...uploadedFiles };
+    delete updatedFiles[documentId];
     setUploadedFiles(updatedFiles);
     onUpdate({ ...data, files: updatedFiles });
   };
@@ -225,8 +299,8 @@ export function DocumentUploadSection({ data, onUpdate, errors = {} }: DocumentU
           Please upload clear scanned copies or high-resolution photos of the following documents:
         </p>
         <ul className="text-sm text-muted-foreground space-y-1">
-          <li>• Files should be in PDF, JPG, or PNG format</li>
-          <li>• Maximum file size: 5MB per document</li>
+          <li>• Files should be in PDF, JPG, PNG, DOC, TXT or other common formats</li>
+          {/* <li>• Maximum file size: 5MB per document</li> */}
           <li>• Ensure all text is clearly readable</li>
           <li>• Documents marked with * are mandatory</li>
           <li>• Click on documents with multiple files to upload each part</li>
@@ -322,21 +396,25 @@ export function DocumentUploadSection({ data, onUpdate, errors = {} }: DocumentU
                       <Label
                         htmlFor={`file-${document.id}`}
                         className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted transition-colors ${
-                          hasError ? 'border-red-500' : 'border-border'
+                          hasError ? 'border-red-500' : dragStates[document.id] ? 'border-primary bg-primary/10' : 'border-border'
                         }`}
+                        onDragEnter={(e) => handleDragEnter(document.id, e)}
+                        onDragLeave={(e) => handleDragLeave(document.id, e)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(document.id, e)}
                       >
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                           <p className="mb-2 text-sm text-muted-foreground text-center">
                             <span className="font-semibold">Click to upload</span> or drag and drop
                           </p>
-                          <p className="text-xs text-muted-foreground">PDF, PNG, JPG (MAX. 5MB)</p>
+                          <p className="text-xs text-muted-foreground">PDF, PNG, JPG, DOC, TXT and more</p>
                         </div>
                         <Input
                           id={`file-${document.id}`}
                           type="file"
                           className="hidden"
-                          accept=".pdf,.png,.jpg,.jpeg"
+                          accept=".pdf,.png,.jpg,.jpeg,.gif,.bmp,.tiff,.webp,.doc,.docx,.txt,.rtf"
                           onChange={(e) => {
                             const file = e.target.files?.[0] || null;
                             handleFileUpload(document.id, file);
@@ -345,8 +423,16 @@ export function DocumentUploadSection({ data, onUpdate, errors = {} }: DocumentU
                       </Label>
                     </div>
                     {fileName && (
-                      <div className="text-sm text-muted-foreground">
-                        Uploaded: {fileName}
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>Uploaded: {fileName}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(document.id)}
+                          className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                     {hasError && (
